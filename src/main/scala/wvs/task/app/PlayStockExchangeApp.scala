@@ -116,7 +116,7 @@ class PlayStockExchangeApp {
 
   def play(): Seq[TraderStatus] = {
     @tailrec
-    def doPlayNext(bidsStatus: CuttedBids, traders: TraidersTeam): Unit = {
+    def doPlayNext(bidsStatus: CuttedBids, traders: TraidersTeam): TraidersTeam = {
       if (bidsStatus.bidsTail.nonEmpty) {
         val applyRes = applyBidToHead(bidsStatus, traders)
         val (bidsStatusUpdated, tradersStatusUpdated) =
@@ -126,11 +126,13 @@ class PlayStockExchangeApp {
           bidsStatus.shift -> traders
         }
         doPlayNext(bidsStatusUpdated, tradersStatusUpdated)
+      } else {
+        traders
       }
     }
 
-    doPlayNext(CuttedBids(Seq.empty, bidsInitial.tail), tradersInitial)
+    val traiders = doPlayNext(CuttedBids(Seq.empty, bidsInitial.tail), tradersInitial)
 
-    tradersInitial.values.toSeq.sortBy(_.id)
+    traiders.values.toSeq.sortBy(_.id)
   }
 }
