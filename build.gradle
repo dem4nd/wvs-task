@@ -1,0 +1,105 @@
+project.ext.appName  = 'wvs-task'
+version = 0.1
+
+project.ext.set("scalaMajor", '2.12')
+project.ext.set("scalaVersion", '2.12.6')
+project.ext.set("scalaTestVersion", '3.0.1')
+
+//apply plugin: 'java'
+apply plugin: 'scala'
+apply plugin: 'java-library-distribution'
+
+archivesBaseName = appName
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.scala-lang:scala-library:$scalaVersion"
+
+    testCompile "org.scalatest:scalatest_$scalaMajor:$scalaTestVersion"
+}
+
+// Task "distZip" added by plugin "java-library-distribution":
+distZip {
+    shouldRunAfter(build)
+    baseName = appName
+    classifier = 'dist'
+}
+
+distTar.enabled = false
+
+distributions {
+    main {
+        contents {
+            into('/')
+
+            into('/') {
+                from('README.md')
+            }
+            into('/lib') {
+                from(jar)
+            }
+            eachFile { f ->
+                if (f.name == jar.archiveName && !f.relativePath.toString().contains('lib/')) {
+                    f.exclude()
+                }
+            }
+        }
+    }
+}
+
+jar {
+    // Keep jar clean:
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/*.MF'
+
+    manifest {
+        attributes 'Main-Class': 'wvs.task.app.PlayStockExchangeApp',
+                'Class-Path': configurations.runtime.files.collect { "$it.name" }.join(' '),
+                'Implementation-Version': version
+    }
+}
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath "com.github.jengelman.gradle.plugins:shadow:4.0.2"
+    }
+}
+
+apply plugin: 'com.github.johnrengelman.shadow'
+
+shadowJar {
+    zip64 true
+    configurations = [project.configurations.compile]
+    archiveName = "${baseName}-app-${version}.${extension}"
+}
+
+shadowJar.dependsOn build
+
+task copyDistFat(dependsOn: shadowJar) {
+    doLast {
+        copy {
+            from 'src/main/'
+            include('bin/*')
+            into "${buildDir}/distributions-fat"
+        }
+        copy {
+            from shadowJar
+            into "${buildDir}/distributions-fat/lib"
+        }
+        copy {
+            from 'README.md'
+            into "${buildDir}/distributions-fat"
+        }
+    }
+}
+
+task distribs(type: Zip, dependsOn: copyDistFat) {
+    classifier = 'dist-fat'
+    from "${buildDir}/distributions-fat"
+    into '/'
+}

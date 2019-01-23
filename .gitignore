@@ -1,2 +1,13 @@
-*.class
-*.log
+.idea/
+*.iml
+.DS_Store
+build/
+.gradle/
+classes/
+target/
+*/out/production/
+target/
+docs/
+
+# run folder
+data/
